@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MulchMath - honest mulch math</title>
+<style>
+  :root { --bg:#141311; --card:#1e1b16; --ink:#f0ece2; --dim:#ada48d; --acc:#a97b3f; --leaf:#8fae6b; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  header { padding:28px 24px 8px; max-width:980px; margin:0 auto; display:flex; justify-content:space-between; align-items:baseline; }
+  h1 { margin:0; font-size:28px; }
+  h1 span { color:var(--acc); }
+  nav a { color:var(--dim); text-decoration:none; font-size:14px; }
+  main { max-width:980px; margin:0 auto; padding:16px 24px 60px; display:grid; gap:18px; }
+  .card { background:var(--card); border-radius:14px; padding:20px; }
+  .card h2 { margin:0 0 12px; font-size:13px; letter-spacing:1.5px; color:var(--dim); text-transform:uppercase; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; }
+  label { display:block; font-size:13px; color:var(--dim); margin-bottom:4px; }
+  input, select { width:100%; background:#161310; border:1px solid #463d2c; color:var(--ink); border-radius:8px; padding:9px 10px; font-size:15px; }
+  .hint { font-size:12.5px; color:var(--dim); margin-top:10px; }
+  button { cursor:pointer; border:0; border-radius:9px; padding:11px 16px; font-size:15px; background:var(--acc); color:#241a0c; font-weight:600; }
+  button.ghost { background:#38311f; color:var(--ink); font-weight:500; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+  .verdict { font-size:17px; line-height:1.65; }
+  .verdict b { color:var(--acc); }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; margin-top:16px; }
+  .stat { background:#161310; border-radius:10px; padding:12px; }
+  .stat .v { font-size:19px; font-weight:700; color:var(--acc); }
+  .stat .k { font-size:12px; color:var(--dim); margin-top:2px; }
+  .note { margin-top:14px; font-size:13.5px; color:var(--dim); }
+  .note b { color:var(--acc); font-weight:600; }
+  .duo { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:14px; }
+  .option { background:#161310; border-radius:10px; padding:14px; border:2px solid transparent; }
+  .option.win { border-color:var(--leaf); }
+  .option .name { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--dim); }
+  .option .price { font-size:22px; font-weight:700; margin:4px 0 2px; }
+  .option.win .price { color:var(--leaf); }
+  .option .sub { font-size:12.5px; color:var(--dim); }
+  @media (max-width:560px){ .duo { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Mulch<span>Math</span></h1>
+  <nav><a href="index.html">home</a></nav>
+</header>
+<main>
+  <section class="card">
+    <h2>The beds</h2>
+    <div class="grid">
+      <div><label>Total bed area (sq ft)</label><input id="area" type="number" value="400"></div>
+      <div><label>Depth</label><select id="depth">
+        <option value="1.5" selected>1.5 in (annual top-up)</option>
+        <option value="2">2 in (thin refresh)</option>
+        <option value="3">3 in (fresh install, honest)</option>
+        <option value="4">4 in (new beds, rough ground)</option>
+      </select></div>
+      <div><label>Bag price (2 cu ft)</label><input id="bagPrice" type="number" step="0.01" value="3.50"></div>
+      <div><label>Bulk price (per yard)</label><input id="bulkPrice" type="number" step="0.01" value="38"></div>
+      <div><label>Delivery fee</label><input id="delivery" type="number" step="0.01" value="65"></div>
+    </div>
+    <p class="hint">Mulch settles about 25% in its first season - the 3-inch blanket you admire in April is a 2-inch blanket by October. Fresh installs need the full 3 inches; top-ups only need 1.5.</p>
+    <div class="row">
+      <button id="run">Do the honest math</button>
+      <button class="ghost" data-preset="refresh">front beds refresh</button>
+      <button class="ghost" data-preset="blanket">the new-build blanket</button>
+      <button class="ghost" data-preset="tree">one tree ring (no volcano)</button>
+    </div>
+  </section>
+
+  <section class="card" id="result" hidden>
+    <h2>Bags vs the truck</h2>
+    <p class="verdict" id="verdictText"></p>
+    <div class="duo">
+      <div class="option" id="optBags">
+        <div class="name">Bags (2 cu ft)</div>
+        <div class="price" id="bagTotal"></div>
+        <div class="sub" id="bagSub"></div>
+      </div>
+      <div class="option" id="optBulk">
+        <div class="name">Bulk + delivery</div>
+        <div class="price" id="bulkTotal"></div>
+        <div class="sub" id="bulkSub"></div>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <p class="note" id="advice"></p>
+  </section>
+
+  <section class="card">
+    <h2>The bag-aisle illusion</h2>
+    <p class="note">One cubic yard covers <b>324 sq ft at one inch deep</b> - and equals <b>13.5 of those 2-cu-ft bags</b>. At $3.50 a bag that yard costs $47.25; the landscape yard charges about $38 for the same pile. Around <b>two yards</b>, bags stop making sense even after the delivery fee. And bulk is sold by the half yard - nobody delivers 1.85. If it comes by truck, have it dumped <b>on a tarp, not the lawn</b>, and keep every inch of it <b>6 inches from tree trunks</b>: volcano mulch kills trees slowly, and the tree never sends the bill.</p>
+  </section>
+</main>
+<script src="engine.js"></script>
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var money = function (x) { return '$' + x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); };
+
+  var PRESETS = {
+    refresh: { area: 400, depth: '1.5' },
+    blanket: { area: 1200, depth: '3' },
+    tree: { area: 50, depth: '3' }
+  };
+  document.querySelectorAll('[data-preset]').forEach(function (b) {
+    b.onclick = function () {
+      var p = PRESETS[b.dataset.preset];
+      $('area').value = p.area; $('depth').value = p.depth;
+      run();
+    };
+  });
+
+  function run() {
+    var area = +$('area').value || 0;
+    var depth = +$('depth').value;
+    if (area <= 0) { alert('Enter a bed area.'); return; }
+    var cmp = MulchMath.compare(area, depth, {
+      bagPrice: +$('bagPrice').value || 3.5,
+      bulkPrice: +$('bulkPrice').value || 38,
+      delivery: +$('delivery').value || 0
+    });
+
+    $('verdictText').innerHTML = area + ' sq ft at ' + depth + ' inches is <b>' + cmp.yards + ' cubic yards</b> - ' +
+      (cmp.winner === 'bulk'
+        ? 'order <b>' + cmp.orderYards + ' yards</b> (they sell by the half) and the truck saves you <b>' + money(cmp.savings) + '</b> over bags.'
+        : '<b>' + cmp.bags + ' bags</b> wins by <b>' + money(cmp.savings) + '</b> once the delivery fee lands.');
+
+    $('bagTotal').textContent = money(cmp.bagTotal);
+    $('bagSub').textContent = cmp.bags + ' bags, carried one at a time';
+    $('bulkTotal').textContent = money(cmp.bulkTotal);
+    $('bulkSub').textContent = cmp.orderYards + ' yd delivered, dumped once';
+    $('optBags').classList.toggle('win', cmp.winner === 'bags');
+    $('optBulk').classList.toggle('win', cmp.winner === 'bulk');
+
+    var stats = [
+      { v: cmp.yards, k: 'cubic yards needed' },
+      { v: cmp.bags, k: 'bags at 2 cu ft each' },
+      { v: cmp.loads, k: 'wheelbarrow trips (bulk)' },
+      { v: MulchMath.settleAllowance(cmp.yards) + ' yd', k: 'settles away by fall' }
+    ];
+    $('stats').innerHTML = stats.map(function (x) {
+      return '<div class="stat"><div class="v">' + x.v + '</div><div class="k">' + x.k + '</div></div>';
+    }).join('');
+
+    $('advice').innerHTML = MulchMath.advice(cmp, depth);
+    $('result').hidden = false;
+    $('result').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  $('run').onclick = run;
+})();
+</script>
+</body>
+</html>
